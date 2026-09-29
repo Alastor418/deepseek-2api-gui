@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     APP_NAME: str = "Deepseek-2api GUI"
-    APP_VERSION: str = "3.3.0"
+    APP_VERSION: str = "3.3.1"
 
     GUI_HOST: str = "127.0.0.1"
     GUI_PORT: int = 8080

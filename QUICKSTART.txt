@@ -1,0 +1,130 @@
+╔════════════════════════════════════════════════════════════════════╗
+║          DeepSeek-2API + Harness — БЫСТРЫЙ СТАРТ                  ║
+╚════════════════════════════════════════════════════════════════════╝
+
+УСТАНОВКА
+─────────
+
+  1. Распакуй архив:
+       unzip deepseek-2api-v3.2.0-full.zip
+       cd deepseek-2api-v3.2.0-full
+
+  2. Запусти installer:
+       bash install.sh
+
+  3. Следуй инструкциям на экране. В определённый момент installer
+     попросит залогиниться в DeepSeek — откроется браузер с GUI.
+     Залогинься и ОТПРАВЬ ЛЮБОЕ СООБЩЕНИЕ в чате DeepSeek.
+     Это нужно чтобы перехватить токен.
+
+  4. Когда увидишь зелёный статус в GUI — вернись в терминал и нажми Enter.
+
+  5. Готово. Открывай:
+       http://127.0.0.1:8080   — GUI
+       http://127.0.0.1:3080   — Harness (если установился)
+
+ЧТО СТАВИТСЯ
+────────────
+
+  ~/deepseek-2api-gui       — код проекта
+  ~/.deepseek-2api/         — аккаунты, ключ, логи, Chromium профиль
+  ~/.dsh/                   — конфиг Harness
+  ~/.config/systemd/user/
+    deepseek-2api.service   — systemd user unit для API
+    deepseek-harness.service — systemd user unit для Harness
+  ~/.config/omarchy/plugins/deepseek-2api/  — плагин бара Omarchy
+
+УПРАВЛЕНИЕ
+──────────
+
+  Статус API:
+    systemctl --user status deepseek-2api.service
+
+  Статус Harness:
+    systemctl --user status deepseek-harness.service
+
+  Логи API (live):
+    journalctl --user -u deepseek-2api.service -f
+
+  Перезапуск:
+    systemctl --user restart deepseek-2api.service
+    systemctl --user restart deepseek-harness.service
+
+  Остановка:
+    systemctl --user stop deepseek-2api.service deepseek-harness.service
+
+ЕСЛИ hCaptcha БЛОКИРУЕТ
+───────────────────────
+
+  Playwright может не пройти hCaptcha. Тогда:
+
+  1. Установи расширение для браузера:
+       Chrome:  chrome://extensions → Developer mode → Load unpacked
+                → выбери ~/deepseek-2api-gui/browser-extensions/chrome/
+       Firefox: about:debugging#/runtime/this-firefox
+                → Load Temporary Add-on
+                → выбери ~/deepseek-2api-gui/browser-extensions/firefox/manifest.json
+
+  2. Открой https://chat.deepseek.com
+  3. Залогинься (пройди капчу руками)
+  4. Отправь ЛЮБОЕ сообщение в чате
+  5. Токен автоматически уйдёт в наш API
+  6. Проверь: http://127.0.0.1:8080 → должен быть зелёный статус
+
+ИСПОЛЬЗОВАНИЕ API
+─────────────────
+
+  Base URL:  http://127.0.0.1:8080/v1
+  API Key:   смотри в GUI (кнопка «Копировать»)
+
+  Пример curl:
+    API_KEY=$(cat ~/.deepseek-2api/api_key.txt)
+    curl -N http://127.0.0.1:8080/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $API_KEY" \
+      -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Привет!"}],"stream":true}'
+
+  Совместимые клиенты:
+    Chatbox, Open WebUI, Continue.dev, Cursor, Python openai
+    Base URL: http://127.0.0.1:8080/v1
+
+ГДЕ ЧТО ЛЕЖИТ
+─────────────
+
+  Документация:
+    ~/deepseek-2api-gui/INSTALL-COMPLETE.md  — полный мануал (этот)
+    ~/deepseek-2api-gui/docs/INSTALL.md       — детали установки
+    ~/deepseek-2api-gui/docs/API.md           — API Reference
+    ~/deepseek-2api-gui/docs/ARCHITECTURE.md  — как устроено
+    ~/deepseek-2api-gui/docs/TROUBLESHOOTING.md — решение проблем
+
+  Полезные команды:
+    bash ~/deepseek-2api-gui/verify.sh       — health check
+    bash ~/deepseek-2api-gui/UNINSTALL.sh    — полное удаление
+
+ТРЕБОВАНИЯ
+──────────
+
+  • Arch Linux / Omarchy (тестировано на Omarchy 4)
+  • Python 3.12 (installer поставит через mise автоматически)
+  • Node.js 24 (installer поставит через mise, если нет)
+  • ~700 МБ свободного места
+  • Интернет при первом запуске
+
+УДАЛЕНИЕ
+────────
+
+  bash ~/deepseek-2api-gui/UNINSTALL.sh
+
+  Скрипт спросит несколько раз — можно удалить только базовое
+  или также Chromium от Playwright и npm-пакет dsh.
+
+ПОДДЕРЖКА
+─────────
+
+  Если что-то не работает:
+    1. bash ~/deepseek-2api-gui/verify.sh  — покажет что сломано
+    2. Смотри docs/TROUBLESHOOTING.md
+    3. Логи: journalctl --user -u deepseek-2api.service -n 50
+
+  GitHub: https://github.com/USERNAME/deepseek-2api-gui
