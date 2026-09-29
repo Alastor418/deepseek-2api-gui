@@ -43,7 +43,7 @@ REQUIRED_NODE_MAJOR="24"
 
 echo
 echo "╔══════════════════════════════════════════════════════════╗"
-echo "║      Deepseek-2api GUI v3.1.0 + DeepSeek Harness         ║"
+echo "║      Deepseek-2api GUI v3.3.1 + DeepSeek Harness         ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo
 
