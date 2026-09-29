@@ -1,0 +1,27 @@
+{
+  "manifest_version": 2,
+  "name": "DeepSeek 2API Token Capture",
+  "version": "1.0.0",
+  "description": "Перехватывает Authorization и Cookie с chat.deepseek.com и отправляет локальному DeepSeek-2API.",
+  "permissions": [
+    "webRequest",
+    "cookies",
+    "storage",
+    "https://chat.deepseek.com/*",
+    "https://*.deepseek.com/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "DeepSeek 2API"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "deepseek-2api@local"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "deepseek-2api",
+  "name": "Deepseek-2api Status",
+  "version": "1.0.0",
+  "author": "you",
+  "description": "Показывает статус локального Deepseek-2api прокси в баре",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "defaultSection": "right"
+  }
+}

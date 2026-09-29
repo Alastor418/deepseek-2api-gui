@@ -1,0 +1,19 @@
+[Unit]
+Description=Deepseek-2api GUI (OpenAI-compatible proxy)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/deepseek-2api-gui
+ExecStart=%h/deepseek-2api-gui/.venv/bin/python %h/deepseek-2api-gui/main.py
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

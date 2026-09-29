@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepseek-2api-gui"
+version = "3.3.0"
+description = "Локальный OpenAI-совместимый прокси для Deepseek с автологином"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [{ name = "you" }]
+
+[tool.setuptools]
+packages = ["app", "app.core", "app.auth", "app.providers", "app.gui"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+
+# ============================================================
+# Ruff
+# ============================================================
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".venv", "app/providers/wasm"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line-length — позволяет длинные строки в docstring
+    "B008",   # Depends(...) в дефолтах — стандарт FastAPI
+    "SIM108", # тернарник не всегда читаемее
+    "RUF001", # ambiguous unicode в docstrings (русский текст)
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]              # assert — это норма в тестах
+"app/providers/deepseek.py" = ["C901"]  # сложный парсер стрима
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ============================================================
+# Mypy
+# ============================================================
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = true
+no_implicit_optional = true
+exclude = ["app/providers/wasm/", "\\.venv/"]
+
+# ============================================================
+# Pytest
+# ============================================================
+[[tool.mypy.overrides]]
+module = "app.providers.pow_solver"
+# wasmtime exports возвращает Union[Func, Table, Memory, ...] — mypy не может
+# разобрать, что мы точно знаем какой это тип. У нас есть runtime-check
+# через _REQUIRED_EXPORTS, поэтому игнорим.
+disable_error_code = ["union-attr", "operator", "call-arg"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

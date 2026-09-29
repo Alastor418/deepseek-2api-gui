@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; img-src 'self' data:" />
+  <title>Deepseek-2api</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="aurora"></div>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="logo-icon">D</span>
+        <span>Deepseek-2api</span>
+      </div>
+      <div class="version" id="version">v…</div>
+    </header>
+
+    <main>
+      <section class="card hero">
+        <div class="status-row">
+          <div id="status-dot" class="dot"></div>
+          <div id="status-text">Проверка статуса…</div>
+        </div>
+        <h1>Локальный API для Deepseek</h1>
+        <p class="subtitle">
+          OpenAI-совместимый прокси. Автологин, авторелогин при истечении токена,
+          мультиаккаунтный пул, поддержка <code>deepseek-reasoner</code>
+          с цепочкой размышлений.
+        </p>
+
+        <div class="actions">
+          <button id="login-btn" class="btn primary">
+            <span>Войти в Deepseek</span>
+          </button>
+          <button id="logout-btn" class="btn secondary">
+            <span>Сбросить credentials.json</span>
+          </button>
+          <button id="pool-clear-btn" class="btn danger">
+            <span>Очистить пул аккаунтов</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Ваш API</h2>
+
+        <div class="field">
+          <label>Base URL</label>
+          <div class="copy-row">
+            <code id="api-url">—</code>
+            <button class="copy-btn" data-copy="api-url">Копировать</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>API Key</label>
+          <div class="copy-row">
+            <code id="api-key">—</code>
+            <button class="copy-btn" data-copy="api-key">Копировать</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Доступные модели</label>
+          <div class="chips" id="models-list"></div>
+        </div>
+
+        <div class="field">
+          <label>Пример запроса (deepseek-reasoner)</label>
+          <pre id="curl-example">—</pre>
+          <button class="copy-btn wide" data-copy="curl-example">Скопировать команду</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Аккаунты <span id="accounts-count" class="count">0</span></h2>
+          <button id="refresh-accounts" class="btn small secondary">Обновить</button>
+        </div>
+
+        <div id="accounts-list" class="accounts-list"></div>
+
+        <details class="add-account">
+          <summary>+ Добавить аккаунт вручную</summary>
+          <div class="add-account-form">
+            <input id="acc-label" type="text" placeholder="Название (например, main)" />
+            <input id="acc-auth" type="text" placeholder="Bearer eyJhbGciOi…" />
+            <input id="acc-cookie" type="text" placeholder="Cookie (опционально)" />
+            <button id="add-account-btn" class="btn primary">Добавить</button>
+          </div>
+        </details>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Логи в реальном времени</h2>
+          <div class="header-actions">
+            <button id="clear-logs" class="btn small secondary">Очистить</button>
+            <a href="/gui/logs/download" class="btn small secondary">Скачать .log</a>
+          </div>
+        </div>
+        <div id="logs" class="logs"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
