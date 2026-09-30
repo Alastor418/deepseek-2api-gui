@@ -128,20 +128,24 @@ fi
 # ============================================================
 # 4. Наш проект
 # ============================================================
-if [ -d "$INSTALL_DIR" ]; then
-    warn "Папка $INSTALL_DIR уже существует"
-    read -rp "Перезаписать её? [y/N] " ans
-    if [[ ! "$ans" =~ ^[Yy]$ ]]; then
-        die "Отменено пользователем"
+if [ "$SCRIPT_DIR" = "$INSTALL_DIR" ]; then
+    ok "Уже работаем из $INSTALL_DIR — копирование не требуется"
+else
+    if [ -d "$INSTALL_DIR" ]; then
+        warn "Папка $INSTALL_DIR уже существует"
+        read -rp "  Перезаписать её? [y/N] " ans
+        if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+            die "Отменено"
+        fi
+        rm -rf "$INSTALL_DIR"
     fi
-    rm -rf "$INSTALL_DIR"
-fi
 
-log "Копирую проект в $INSTALL_DIR"
-mkdir -p "$INSTALL_DIR"
-rsync -a --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
-    "$SCRIPT_DIR/" "$INSTALL_DIR/"
-ok "Проект скопирован"
+    log "Копирую проект в $INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+    rsync -a --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
+        "$SCRIPT_DIR/" "$INSTALL_DIR/"
+    ok "Проект скопирован"
+fi
 
 # ============================================================
 # 5. venv + зависимости
