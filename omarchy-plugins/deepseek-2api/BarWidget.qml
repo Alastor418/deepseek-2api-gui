@@ -81,9 +81,23 @@ BarWidget {
                     "~/.config/omarchy/plugins/deepseek-2api/open-harness.sh"
                 ])
             } else if (b === Qt.RightButton) {
+                // Auto-detect terminal: xdg-terminal-exec -> omarchy-launch-terminal
+                // -> foot -> kitty -> alacritty
                 Quickshell.execDetached([
-                    "alacritty", "-e",
-                    "journalctl", "--user", "-u", "deepseek-2api.service", "-f"
+                    "bash", "-lc",
+                    "if command -v xdg-terminal-exec >/dev/null 2>&1; then " +
+                    "  xdg-terminal-exec journalctl --user -u deepseek-2api.service -f; " +
+                    "elif command -v omarchy-launch-terminal >/dev/null 2>&1; then " +
+                    "  omarchy-launch-terminal journalctl --user -u deepseek-2api.service -f; " +
+                    "elif command -v foot >/dev/null 2>&1; then " +
+                    "  foot journalctl --user -u deepseek-2api.service -f; " +
+                    "elif command -v kitty >/dev/null 2>&1; then " +
+                    "  kitty journalctl --user -u deepseek-2api.service -f; " +
+                    "elif command -v alacritty >/dev/null 2>&1; then " +
+                    "  alacritty -e journalctl --user -u deepseek-2api.service -f; " +
+                    "else " +
+                    "  notify-send 'DeepSeek 2API' 'Не найден ни один терминал'; " +
+                    "fi"
                 ])
             } else if (b === Qt.MiddleButton) {
                 Quickshell.execDetached([

@@ -25,7 +25,6 @@ fi
 URL=""
 for i in $(seq 1 30); do
     URL=$(journalctl --user -u deepseek-harness.service \
-        --since "2 min ago" --no-pager 2>/dev/null \
         | grep -oE "$URL_RE" | tail -1 || true)
     if [ -n "$URL" ]; then
         break
