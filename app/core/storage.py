@@ -3,6 +3,7 @@
 Все записи атомарные: tmp → fsync → rename.
 Права на файлы — всегда 0o600.
 """
+import asyncio
 import contextlib
 import json
 import os
@@ -44,13 +45,20 @@ def _atomic_write(path: Path, data: str, mode: int = 0o600) -> None:
         raise
 
 
-def save_credentials(creds: Credentials) -> None:
-    _atomic_write(CRED_FILE, creds.model_dump_json(indent=2))
+async def save_credentials(creds: Credentials) -> None:
+    await asyncio.to_thread(_atomic_write, CRED_FILE, creds.model_dump_json(indent=2))
 
 
-def load_credentials() -> Credentials | None:
-    if not CRED_FILE.exists():
-        return None
+async def load_credentials() -> Credentials | None:
+    def _load():
+        if not CRED_FILE.exists():
+            return None
+        try:
+            data = json.loads(CRED_FILE.read_text(encoding="utf-8"))
+            return Credentials(**data)
+        except Exception:
+            return None
+    return await asyncio.to_thread(_load)
     try:
         data = json.loads(CRED_FILE.read_text(encoding="utf-8"))
         return Credentials(**data)
@@ -58,14 +66,18 @@ def load_credentials() -> Credentials | None:
         return None
 
 
-def clear_credentials() -> None:
-    with contextlib.suppress(Exception):
-        CRED_FILE.unlink(missing_ok=True)
+async def clear_credentials() -> None:
+    def _clear():
+        with contextlib.suppress(Exception):
+            CRED_FILE.unlink(missing_ok=True)
+    await asyncio.to_thread(_clear)
 
 
-def get_or_create_api_key() -> str:
-    if KEY_FILE.exists():
-        return KEY_FILE.read_text(encoding="utf-8").strip()
-    key = "sk-" + secrets.token_urlsafe(32)
-    _atomic_write(KEY_FILE, key)
-    return key
+async def get_or_create_api_key() -> str:
+    def _get_key():
+        if KEY_FILE.exists():
+            return KEY_FILE.read_text(encoding="utf-8").strip()
+        key = "sk-" + secrets.token_urlsafe(32)
+        _atomic_write(KEY_FILE, key)
+        return key
+    return await asyncio.to_thread(_get_key)

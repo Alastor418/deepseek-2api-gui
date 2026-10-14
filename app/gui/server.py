@@ -6,7 +6,6 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
@@ -24,7 +23,6 @@ from app.core.logging import LOG_FILE, broadcaster, setup_logging
 from app.core.storage import (
     Credentials,
     clear_credentials,
-    get_or_create_api_key,
     load_credentials,
     save_credentials,
 )
@@ -47,35 +45,37 @@ _background_tasks: set[asyncio.Task] = set()
 # ============================================================
 async def _check_existing_token(provider: DeepseekProvider) -> bool:
     """Быстрая проверка, что текущий аккаунт даёт валидную сессию."""
-    acc = provider._pick_account()
+    acc = await provider._pick_account()
     if acc is None:
         return False
 
     headers = provider._headers_for(acc)
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.post(
-                f"{provider.BASE_URL}/chat_session/create",
-                headers=headers,
-                json={},
-            )
-            try:
-                parsed = r.json()
-            except Exception:
-                parsed = None
+        if provider._client is None:
+            return False
+        r = await provider._client.post(
+            f"{provider.BASE_URL}/chat_session/create",
+            headers=headers,
+            json={},
+            timeout=10,
+        )
+        try:
+            parsed = r.json()
+        except Exception:
+            parsed = None
 
-            if _is_dead_session(r.status_code, r.text, parsed):
-                logger.info(f"   [startup] dead session: {r.text[:120]}")
-                return False
-            if not isinstance(parsed, dict):
-                return False
-            data = parsed.get("data")
-            if not isinstance(data, dict):
-                return False
-            biz = data.get("biz_data")
-            if not isinstance(biz, dict):
-                return False
-            return bool(biz.get("id"))
+        if _is_dead_session(r.status_code, r.text, parsed):
+            logger.info(f"   [startup] dead session: {r.text[:120]}")
+            return False
+        if not isinstance(parsed, dict):
+            return False
+        data = parsed.get("data")
+        if not isinstance(data, dict):
+            return False
+        biz = data.get("biz_data")
+        if not isinstance(biz, dict):
+            return False
+        return bool(biz.get("id"))
     except Exception as e:
         logger.debug(f"Token check failed: {e}")
         return False
@@ -129,12 +129,12 @@ async def _startup_auto_login(provider: DeepseekProvider) -> None:
             )
             return
 
-        acc = pool.add(
+        acc = await pool.add(
             authorization=creds["authorization"],
             cookie=creds.get("cookie", ""),
             label="auto-startup",
         )
-        pool.reactivate(acc.id)
+        await pool.reactivate(acc.id)
         logger.success(f"OK Автологин при старте успешен: {acc.id}")
     except TimeoutError:
         logger.warning("! Автологин при старте истёк по таймауту — нужен ручной вход")
@@ -147,10 +147,16 @@ async def _startup_auto_login(provider: DeepseekProvider) -> None:
 # ============================================================
 @asynccontextmanager
 async def _lifespan(app_instance: FastAPI):
+    if not settings.API_MASTER_KEY:
+        from app.core.storage import get_or_create_api_key
+        settings.API_MASTER_KEY = await get_or_create_api_key()
+
     loop = asyncio.get_running_loop()
     broadcaster.set_loop(loop)
 
     provider: DeepseekProvider = app_instance.state.provider
+    await pool.load()
+    await provider.start()
 
     # Держим ссылки на tasks, иначе GC их соберёт.
     background: set[asyncio.Task] = set()
@@ -168,6 +174,7 @@ async def _lifespan(app_instance: FastAPI):
         # из-за чего systemd не может корректно остановить процесс.
         for t in background:
             t.cancel()
+        await provider.stop()
 
 
 # ============================================================
@@ -176,8 +183,7 @@ async def _lifespan(app_instance: FastAPI):
 def create_gui_app() -> FastAPI:
     setup_logging()
 
-    api_key = settings.API_MASTER_KEY or get_or_create_api_key()
-    settings.API_MASTER_KEY = api_key
+    # API_MASTER_KEY is now set in _lifespan
 
     app = FastAPI(lifespan=_lifespan, title=settings.APP_NAME)
     app.state.provider = DeepseekProvider()
@@ -221,9 +227,9 @@ def create_gui_app() -> FastAPI:
     # ---------- GUI status ----------
     @app.get("/gui/status")
     async def gui_status():
-        creds = load_credentials()
+        creds = await load_credentials()
         return {
-            "authenticated": creds is not None or pool.count_active() > 0,
+            "authenticated": creds is not None or (await pool.count_active()) > 0,
             "login_in_progress": state.login_in_progress,
             "api_url": f"http://{settings.GUI_HOST}:{settings.GUI_PORT}/v1",
             "api_key": settings.API_MASTER_KEY,
@@ -234,8 +240,8 @@ def create_gui_app() -> FastAPI:
             "cookie_preview": (
                 creds.cookie[:40] + "..." if creds else None
             ),
-            "accounts_total": len(pool.list()),
-            "accounts_active": pool.count_active(),
+            "accounts_total": len(await pool.list()),
+            "accounts_active": await pool.count_active(),
             "models": list(settings.SUPPORTED_MODELS),
             "aliases": settings.MODEL_ALIASES or {},
             "log_file": str(LOG_FILE),
@@ -255,15 +261,15 @@ def create_gui_app() -> FastAPI:
 
     @app.post("/gui/logout")
     async def gui_logout():
-        clear_credentials()
+        await clear_credentials()
         logger.info("Legacy credentials.json удалён")
         return {"status": "ok"}
 
     @app.post("/gui/pool/clear")
     async def gui_pool_clear():
-        ids = [a.id for a in pool.list()]
+        ids = [a.id for a in await pool.list()]
         for acc_id in ids:
-            pool.remove(acc_id)
+            await pool.remove(acc_id)
         logger.info(f"Очищен пул аккаунтов: {len(ids)} шт.")
         return {"status": "ok", "removed": len(ids)}
 
@@ -301,7 +307,7 @@ def create_gui_app() -> FastAPI:
     @app.get("/gui/accounts")
     async def gui_accounts_list():
         items = []
-        for a in pool.list():
+        for a in await pool.list():
             items.append(
                 {
                     "id": a.id,
@@ -323,7 +329,7 @@ def create_gui_app() -> FastAPI:
             raise HTTPException(
                 400, "authorization должен начинаться с 'Bearer '"
             )
-        acc = pool.add(
+        acc = await pool.add(
             authorization=auth,
             cookie=payload.cookie.strip(),
             label=payload.label.strip(),
@@ -333,22 +339,22 @@ def create_gui_app() -> FastAPI:
 
     @app.delete("/gui/accounts/{acc_id}")
     async def gui_accounts_delete(acc_id: str):
-        if not pool.remove(acc_id):
+        if not await pool.remove(acc_id):
             raise HTTPException(404, "Аккаунт не найден")
         logger.info(f"Удалён аккаунт {acc_id}")
         return {"status": "ok"}
 
     @app.post("/gui/accounts/{acc_id}/reactivate")
     async def gui_accounts_reactivate(acc_id: str):
-        if not pool.get(acc_id):
+        if not await pool.get(acc_id):
             raise HTTPException(404, "Аккаунт не найден")
-        pool.reactivate(acc_id)
+        await pool.reactivate(acc_id)
         logger.info(f"Реактивирован аккаунт {acc_id}")
         return {"status": "ok"}
 
     @app.post("/gui/accounts/{acc_id}/label")
     async def gui_accounts_label(acc_id: str, payload: AccountLabelUpdate):
-        if not pool.update_label(acc_id, payload.label.strip()):
+        if not await pool.update_label(acc_id, payload.label.strip()):
             raise HTTPException(404, "Аккаунт не найден")
         return {"status": "ok"}
 
@@ -409,8 +415,8 @@ async def _do_login() -> None:
         if not creds.get("authorization"):
             logger.error("X Не удалось перехватить токен")
             return
-        save_credentials(Credentials(**creds))
-        acc = pool.add(
+        await save_credentials(Credentials(**creds))
+        acc = await pool.add(
             authorization=creds["authorization"],
             cookie=creds.get("cookie", ""),
             label="manual",

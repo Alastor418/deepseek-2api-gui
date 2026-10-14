@@ -84,13 +84,18 @@ def main() -> None:
     ).start()
 
     app = create_gui_app()
-    uvicorn.run(
-        app,
-        host=settings.GUI_HOST,
-        port=settings.GUI_PORT,
-        log_level="warning",
-        access_log=False,
-    )
+    try:
+        uvicorn.run(
+            app,
+            host=settings.GUI_HOST,
+            port=settings.GUI_PORT,
+            log_level="warning",
+            access_log=False,
+        )
+    except SystemExit as e:
+        _die(f"Не удалось запустить сервер Uvicorn (SystemExit: {e.code}).", f"Возможно, порт {settings.GUI_PORT} уже занят.")
+    except Exception as e:
+        _die(f"Критическая ошибка: {e}")
 
 
 if __name__ == "__main__":
