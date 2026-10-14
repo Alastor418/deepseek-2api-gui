@@ -13,3 +13,13 @@ class BaseProvider(ABC):
         original_request: Request,
     ) -> StreamingResponse | JSONResponse:
         ...
+
+    @abstractmethod
+    async def start(self) -> None:
+        """Starts the provider."""
+        ...
+
+    @abstractmethod
+    async def stop(self) -> None:
+        """Stops the provider."""
+        ...
